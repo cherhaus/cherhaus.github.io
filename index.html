@@ -1,0 +1,585 @@
+<!DOCTYPE html>
+<html>
+
+  <head>
+    <meta charset='utf-8' />
+    <meta http-equiv="X-UA-Compatible" content="chrome=1" />
+    <meta name="description" content="Cherhaus.github.io : ParaSim Documentation" />
+
+    <link rel="stylesheet" type="text/css" media="screen" href="stylesheets/stylesheet.css">
+
+    <title>Cherhaus.github.io</title>
+  </head>
+
+  <body>
+
+    <!-- HEADER -->
+    <div id="header_wrap" class="outer">
+        <header class="inner">
+          <a id="forkme_banner" href="https://github.com/cherhaus">View on GitHub</a>
+
+          <h1 id="project_title">Cherhaus.github.io</h1>
+          <h2 id="project_tagline">ParaSim Documentation</h2>
+
+        </header>
+    </div>
+
+    <!-- MAIN CONTENT -->
+    <div id="main_content_wrap" class="outer">
+      <section id="main_content" class="inner">
+        <h1>
+<a name="parasim---parallelized-high-throughput-structural-similarity-calculations" class="anchor" href="#parasim---parallelized-high-throughput-structural-similarity-calculations"><span class="octicon octicon-link"></span></a>ParaSim - Parallelized high-throughput structural similarity calculations</h1>
+
+<p>Diversity assessments and structural comparisons of large compound databases require calculating similarities of millions of compounds in an affordable time. The <em>ParaSim</em> programme addresses this challenge by adapting similarity calculations to high-performance computer environments.</p>
+
+<p><em>ParaSim</em> parallelizes the calculations according to the number of available computing cores on a single machine. The programme is optimized for the throughput of very large numbers of query structures against very large numbers of reference structures. For that reason the reference structure dataset in its entirety is loaded into memory prior to calculations. The size of the reference dataset is therefore solely limited by the available memory. As a special feature, repeatedly queried reference datasets can be kept in memory as persistent memory objects to be immediately available.</p>
+
+<p><em>ParaSim</em> calculates similarities based on binary structural fingerprints. A fingerprint is a set of "on" or "off" (0) bits for each present structural feature which can be stored as a binary object.
+<em>ParaSim</em> does not compute fingerprints by itself but relies on third-party software to do so. Basically, all types of structural fingerprints which can be stored in a bitset can be used by <em>ParaSim</em>. Examples for fingerprints usable by <em>ParaSim</em> are included in the OpenSource chemoinformatics toolkits <em>RDKit</em> (<a href="http://www.rdkit.org">http://www.rdkit.org</a>), <em>CDK</em> (<a href="http://cdk.sourceforge.net/">http://cdk.sourceforge.net/</a>) or <em>OpenBabel</em> (<a href="http://www.openbabel.org">http://www.openbabel.org</a>) as well as the commercial chemoinformatics software packages <em>Pipeline Pilot</em>™ from Accelrys® (<a href="http://www.accelrys.com/products/pipeline-pilot/">http://www.accelrys.com/products/pipeline-pilot/</a>) or the Digital Chemistry® toolkit (<a href="http://www.digitalchemistry.co.uk">http://www.digitalchemistry.co.uk</a>). As <em>ParaSim</em> calculates similarities based on binary representations, fingerprint lengths should best be a multiple of 32 (as integer size is 32-bit on most systems, also on 64-bit machines) and must be a multiple of 8 (as character size is 8-bit).</p>
+
+<hr><h2>
+<a name="what-parasim-does" class="anchor" href="#what-parasim-does"><span class="octicon octicon-link"></span></a>What ParaSim does</h2>
+
+<p><em>ParaSim</em> calculates the well-known Tanimoto (or Jaccard) and Dice similarity indexes from fingerprint query and reference input files. Dissimilarity is represented by a similarity index of 0.0, identity by 1.0. It can be defined by the user how many reference molecules/nearest neighbors shall be identified per query molecule. By default, one hit molecule, the nearest neighbour, is captured. Moreover, thresholds can be defined indicating minimum and maximum similarities for hit molecules. A maximum similarity threshold can further be used to decide whether identity hits with a similarity of 1.0 should be included or excluded. In case they should be excluded, the maximum similarity threshold can be set to a value &lt; 1, e.g. 0.999999.</p>
+
+<p><em>ParaSim</em> accepts query and reference input files containing fingerprint information in a format described below in more detail. <em>ParaSim</em> output is written in a tab-delimited format to the system's standard output stream (stdout, usually the console) from where it can easily be redirected to files or pipes using the operation system's redirection mechanisms. Output consists of one row per result containing the ID of the query structure, the ID of the found reference structure and the computed similarity index. If only one nearest neighbour per query is requested and no similarity thresholds are applied (so the full reference set will be queried), then also the average similarity of the query molecule against all reference molecules is printed out for statistical purposes. For multiple nearest neighbour reference molecules per query, multiple output lines are written, all containing the same ID of the query structure. In this case the statistical information is omitted in order to keep the output clearly arranged. Using the "verbose" option <code>-v</code>, additional information describing the progress of file reading and calculating steps is written to the standard error stream (stderr, usually also the console).</p>
+
+<p><strong>Notes</strong></p>
+
+<ul>
+<li>Depending on the fingerprint type generated with third-party software, a similarity index of 1.0 does not necessarily mean full structural identity! E.g. fingerprints based on functional classifications may lead to a similarity of 1.0 for highly similar but not identical structures.</li>
+<li>For speed reasons, <em>ParaSim</em> does not sort the output in any way but immediately returns results as they are computed by the executing threads. Therefore, the order of output lines may vary from run to run. If the output is required in a sorted way, this can easily be achieved by piping it into a subsequent sort command.</li>
+</ul><hr><h2>
+<a name="contents-of-this-package" class="anchor" href="#contents-of-this-package"><span class="octicon octicon-link"></span></a>Contents of this Package</h2>
+
+<p><em>ParaSim</em> is principally able to be executed by itself if appropriate fingerprint input files are provided. However, in order to extend the usage of <em>ParaSim</em> to persistent memory objects and to facilitate similarity searches directly from Smiles strings or structure files (SDF or Smiles), several additional scripts are provided:</p>
+
+<p>1.<code>fp2mem.pl</code> : Creates and manages persistentently stored memory objects with reference fingerprint data.</p>
+
+<p>2.<code>rdkit2parasim.py</code> : Generates <em>ParaSim</em> input files from Smiles strings or SDF/Smiles files applying RDKit's Morgan or feature-based Morgan fingerprints. Requires installation of Python and RDKit.</p>
+
+<p>3.<code>Molecule2Parasim.xml</code> : A Pipeline Pilot™ protocol for the generation of <em>ParaSim</em> input files from Smiles strings or SDF/Smiles files applying ECFP or FCFP fingerprints. Requires installation of Pipeline Pilot™.</p>
+
+<p>4.<code>parasim-conversion-knime-demo.zip</code> : An example workflow for the Open-Source workflow engine Knime to demonstrate how <em>ParaSim</em> input files can be generated from within the OpenSource workflow engine Knime.</p>
+
+<p>5.<code>simsearch.pl</code> : Allows similarity searches directly from a Smiles string or structure files (SDF or Smiles) against a reference dataset stored in <em>ParaSim</em> format.</p>
+
+<p>For testing, sample files with 10 records drawn from the freely available PubChem and ZINC databases are provided as well in the data/ subdirectory.</p>
+
+<p>Moreover, several installation-related files are packaged together with <em>ParaSim</em>:</p>
+
+<p>1.<code>parasim-config.txt</code> : This central configuration file may be edited by the user and stores several default values used by the different scripts.</p>
+
+<p>2.<code>prepare_and_call_pipeline_pilot.csh</code> : A sample configuration shell script to prepare the system environment for inclusion of Pipeline Pilot™ fingerprint calculations by <code>simsearch.pl</code>.</p>
+
+<p>3.<code>prepare_and_call_python_rdkit.csh</code> : A sample configuration shell script to prepare the system environment for inclusion of RDKit fingerprint calculations by <code>simsearch.pl</code>.</p>
+
+<p>4.<code>Parasim.pm</code> : A Perl module containing all shared <em>ParaSim</em> functions.</p>
+
+<hr><h2>
+<a name="requirements" class="anchor" href="#requirements"><span class="octicon octicon-link"></span></a>Requirements</h2>
+
+<p><strong>Operating System</strong></p>
+
+<p>In the current implementation, <em>ParaSim</em> itself is a single Perl script with a parallelized computational core written in C. The C core potentially applies extensions of the GCC compiler or hardware routines of Intel® processors (Intel® Streaming SIMD Extensions/SSE4). For multithreading, the C core makes use of POSIX threads by the <em>pthread</em> library which has to be accessible to the compiler. For the use of persistent memory objects ParaSim uses SysV inter process communication (IPC) concepts. Due to these requirements, <em>ParaSim</em> currently can only be executed in a Unix/Linux OS environment with the GCC compiler installed.</p>
+
+<p><strong>Software</strong></p>
+
+<p><em>ParaSim</em> was tested successfully with Perl version 5.10.0 and 5.12.1 under OpenSuse Linux 11.3 on 32-bit dual-core and Suse Linux Enterprise Server 11 SP3 on 64-bit multiprocessor machines up to 192 cores. Some Perl modules which are not part of the standard distribution are required:</p>
+
+<ul>
+<li>The C code is directly integrated into the Perl code and compiled by the Perl module <a href="http://search.cpan.org/%7Esisyphus/Inline-0.50/C/C.pod">Inline::C</a> which is not part of the standard Perl distribution and therefore must be manually installed.</li>
+<li>SysV IPC support is supplied by the Perl module <a href="http://search.cpan.org/%7Eandya/IPC-ShareLite-0.17/lib/IPC/ShareLite.pm">IPC::Sharelite</a> which also requires separate installation.</li>
+</ul><p>If you want to make use of the tools packaged together with <em>ParaSim</em>, installation of third-party software like Python, RDKit and Pipeline Pilot™ or further software packages for fingerprint calculations may be necessary.</p>
+
+<p><strong>Memory</strong></p>
+
+<p>Because <em>ParaSim</em> loads the reference set into memory, the size of the reference set is limited only by the available memory. Typically, memory consumption per 1 million of reference fingerprints of length 1024 is ~150 MB as persistent memory object and ~300 MB  during runtime.</p>
+
+<hr><h2>
+<a name="installation" class="anchor" href="#installation"><span class="octicon octicon-link"></span></a>Installation</h2>
+
+<p><em>ParaSim</em> itself currently consists of just a single Perl script including the C code as well. Compilation of the C source code is performed automatically by the Inline::C module when calling the Perl script. Therefore, basically no installation is required:</p>
+
+<ul>
+<li>Make shure that the OS and software requirements described above are met</li>
+<li>Extract the archive</li>
+<li>In case you do not want to prepend the Perl call itself each time, make the script executable (<code>chmod 755 parasim.pl</code>). <em>ParaSim</em> expects the perl executable to be located in /usr/bin/perl. If that is not true in your case, change the default Perl path in the first line of the script's source code.</li>
+</ul><p>In order to test if <em>ParaSim</em> runs correctly, try</p>
+
+<pre><code>perl parasim.pl -q data/pubchem-test-fcfp6.txt -r data/zinc-test-fcfp6.txt
+</code></pre>
+
+<p>The output should be</p>
+
+<pre><code>QUERY   REFERENCE       TANIMOTO        AVG_TANIMOTO
+68664   ZINC01914437    0.198019801980198       0.104496307506587
+71360   ZINC03775002    0.133333333333333       0.103979492391050
+68938   ZINC03774999    0.160377358490566       0.122158970101436
+71696   ZINC03774999    0.163636363636364       0.118017086925888
+71917   ZINC03774999    0.147368421052632       0.102165139370256
+71107   ZINC03774999    0.173076923076923       0.128406853662191
+71542   ZINC01914437    0.185185185185185       0.107759423159295
+71227   ZINC03774999    0.181818181818182       0.129684949182247
+71767   ZINC03775009    0.174418604651163       0.122120643622887
+71923   ZINC03774991    0.154761904761905       0.117569042869504
+</code></pre>
+
+<p><br></p>
+
+<p>If you want to start similarity searches directly from SDF or Smiles files using <code>simsearch.pl</code>, fingerprints and input files for <em>ParaSim</em> need to be generated during runtime using third-party software. Therefore, third-party software packages like Python and RDKit or Pipeline Pilot™ need to be installed separately:</p>
+
+<ul>
+<li>For <code>rdkit2parasim.py</code> make shure that beside RDKit modules also the modules "sys", "argparse", "gzip" and "base64" are accessible to the Python installation.</li>
+<li>Paths to executables and scripts need to be defined in the respective section of <code>parasim-config.txt</code>. Therefore replace placeholders like "my_path" or "my_server" in <code>parasim-config.txt</code> by the path and server information fitting your environment.</li>
+<li>It is sometimes necessary to prepare environments for scripting languages like Perl or Python or for Pipeline Pilot™. This can be achieved either by calling executables from within a preparational shell script or by calling several commands combined by '&amp;&amp;'. You may use the example scripts <code>prepare_and_call_pipeline_pilot.csh</code> and <code>prepare_and_call_python_rdkit.csh</code> for this purpose and adapt them to your needs.</li>
+</ul><p><strong>Technical note</strong>: In the current version of <em>ParaSim</em>, Inline::C compiles the C sources only if binaries do not yet exist or if the C sources were modified. Therefore, if you use <em>ParaSim</em> on different machines in a network, it may happen that you cannot run <em>ParaSim</em> on one architecture because it was compiled on a different architecture before. In this case, make sure that you either re-run the script from a different run directory or that you apply a slight change in the C section of the source code (a single space character is already sufficient) to trigger a recompilation for the new architecture. This issue will be addressed in a future version of <em>ParaSim</em>.</p>
+
+<hr><h2>
+<a name="how-to-use-parasim" class="anchor" href="#how-to-use-parasim"><span class="octicon octicon-link"></span></a>How to use ParaSim</h2>
+
+<h3>
+<a name="synopsis" class="anchor" href="#synopsis"><span class="octicon octicon-link"></span></a>Synopsis</h3>
+
+<pre><code>USAGE: parasim.pl [options] -q query.txt[.gz] [-r reference.txt[.gz]]
+
+OPTIONS: -min #min_similarity    The minimum similarity (0.0 = dissimilarity, 1.0 = identity).
+                                 This has impact on the performance.
+                                 Default: 0.00
+         -max #max_similarity    The maximum similarity (0.0 = dissimilarity, 1.0 = identity).
+                                 This has impact on the performance.
+                                 Default: 1.00
+         -n/k #num_similars      The number of hits to keep (k nearest neighbors).
+                                 Default: 1
+         -c similarity_coeff     The similarity coefficient to use. Allowed values:
+                                 'tan' : Tanimoto/Jaccard similarity coefficient
+                                 'dice' : Dice similarity coefficient
+                                 Default: 'tan'
+         -v                      Verbose. Print detailed status and progress information.
+         -q query.txt[.gz]       The file containing the query fingerprints.
+                                 Wildcards are expanded but have to be quoted.
+         -r reference.txt[.gz]   The file containing the reference fingerprints.
+                                 Wildcards are expanded but have to be quoted.
+                                 Use 'mem:#key' to identify a persistent memory object
+                                 which was created with fp2mem-persist.pl before.
+                                 Default: 'mem:0'
+         -h/help                 Show this help.
+
+ADVANCED OPTIONS:
+         -t #threads             The number of threads to be used in parallel.
+                                 Default: Number of available cores on host
+         -b binary_class         The class used to represent the fingerprint.
+                                 This has impact on the performance. Allowed values:
+                                 'int' : Integer representation of fingerprint bitset
+                                 'char' : Character representation of fingerprint bitset
+                                 Default: 'int' for fingerprints being a multiple of 32,
+                                          'char' for fingerprints being a multiple of 8.
+         -u on/off               Switch on/off loop-unrolling. This has impact on the performance.
+                                 Default: 'on' for 32 x sizeof(int) bit fingerprints,
+                                          'on' for 64 x sizeof(char) bit fingerprints,
+                                          'off' for all other fingerprint lengths.
+</code></pre>
+
+<p><br></p>
+
+<h3>
+<a name="advanced-options" class="anchor" href="#advanced-options"><span class="octicon octicon-link"></span></a>Advanced Options</h3>
+
+<p>Beside the set of standard options whose purpose is to control the basic features of <em>ParaSim</em>, <em>ParaSim</em> also provides a set of advanced options for experienced users which control the technical behaviour of the software.</p>
+
+<p>By default, <em>ParaSim</em> uses all available CPU cores for parallel calculations and automatically reduces the number to the number of query fingerprints if necessary. However, given the case that only a lower,
+limited number of cores shall be used by <em>ParaSim</em>, this can be manually defined using option <code>-t</code>.</p>
+
+<p><em>ParaSim</em> implements several different options for the most time-consuming calculation, the count of on-bits in a fingerprint, the so-called <em>bitcount</em> or <em>popcount</em>. By default, it determines the best
+applicable method based on the length of the fingerprint. However, for test or research purposes, the calculation method can completely be controlled by the user:</p>
+
+<p>1.The way how the fingerprint is internally interpreted (option <code>-b</code>): <code>char</code> (character) or <code>int</code> (integer) with a speed advantage for 'int'.</p>
+
+<p>2.Loop-unrolling (option <code>-u</code>): <code>on</code> or <code>off</code>. For particular fingerprints lengths (currently <code>32 x sizeof(int)</code> and <code>64 x sizeof(char)</code> with <code>sizeof(int) = 32</code> on most systems and usually <code>sizeof(char) = 8</code>) a special internal algorithm is available which is supposed to result in additional gain of performance. If not set manually, it will be used automatically if applicable.</p>
+
+<p><br></p>
+
+<h3>
+<a name="user-defaults" class="anchor" href="#user-defaults"><span class="octicon octicon-link"></span></a>User Defaults</h3>
+
+<p><em>ParaSim</em> comes with a central configuration file <code>parasim-config.txt</code> which consolidates the different default values and makes it easy to modify them. Especially, paths to preinstalled third-party software
+packages for the calculation of fingerprints from chemical structure files are defined here. Just use a text editor of your choice to edit the file and change default values if required. Comments within the file explain the default values' meanings.</p>
+
+<p>The maximum number of allowed parallel threads (set to 256) is the only default value which can only be modified in the C source code section of the <em>ParaSim</em> Perl script. This parameter limits the memory used for thread function parameters and is more of technical value. The practically used number of threads is defined by option <code>-t</code> and must be equal or lower than this value (checked during runtime). If this is not sufficient, replace the value by the one you require in the source code command <code>#define MAX_THREADS 256</code>.</p>
+
+<hr><h2>
+<a name="factors-influencing-calculation-performance" class="anchor" href="#factors-influencing-calculation-performance"><span class="octicon octicon-link"></span></a>Factors influencing Calculation Performance</h2>
+
+<p>Several factors have direct influence on the calculation performance. In parts this can be significant.</p>
+
+<p>1.The number of cores: Obviously, parallelisation has the strongest     impact on performance (option <code>-t</code>, see Advanced Options).</p>
+
+<p>2.The fingerprint binary class: Where applicable, fingerprints should be interpreted as integers which is faster (option <code>-b</code>, see Advanced Options).</p>
+
+<p>3.The fingerprint length: Depending on the length of the fingerprint, faster or slower calculation routines can be called. Advisable is a fingerprint length of a multiple of 32 as fingerprints can then be interpreted as integers. Moreover, if the fingerprint length fulfils the requirements for loop-unrolling (option <code>-u</code>, see Advanced Options), this adds additional speed. The current version of <em>ParaSim</em> contains algorithms optimized for a fingerprint length of 512 or, even better, 1024.</p>
+
+<p>4.Thresholds: Application of similarity thresholds has strong influence on the computation speed because thresholds allow purging of reference compounds prior to similarity calculations. The narrower the thresholds are set, the faster the calculations are performed. Usually, for finding nearest neighbors, a minimum similarity of about 0.3-0.5 may be sufficient which already allows to save about a third to half of the computation time.</p>
+
+<hr><h2>
+<a name="input-file-format" class="anchor" href="#input-file-format"><span class="octicon octicon-link"></span></a>Input File Format</h2>
+
+<p>In the current version, <em>ParaSim</em> expects that a software package which is able to compute structural fingerprints and to convert them into any binary format is also able to compute the number of "on" bits for that fingerprint, the so-called <em>bitcount</em> or <em>popcount</em>. Bitcounts of query and reference bitsets as well as the intersection of both are the basis of the similarity calculation. Therefore the <em>ParaSim</em> file format for the query and reference fingerprints is a tab-delimited plain text format (Windows or Linux style) with one row for each structure containing three columns:</p>
+
+<ul>
+<li>A unique alphanumeric row/structure identifier</li>
+<li>The bitcount of the fingerprint for that structure in integer format</li>
+<li>The fingerprint bitset encoded in the common Base64 string format</li>
+</ul><p>A headline containing column identifiers describing the fingerprint type is mandatory. This fingerprint description is used by <em>ParaSim</em> to check if the same fingerprint type is used in both the query and reference data sets. A more descriptive appended '_BASE64' (or prepended 'BASE64_') is tolerated but not mandatory and will be ignored during comparison of the fingerprint types. The name of the structure identifier is detected by the file parser but so far this information is not used. The name of the bitcount column must be 'BITCOUNT' or 'POPCOUNT'.</p>
+
+<p>The size of the fingerprint bitset (and Base64 string) is not fixed. This implies that the fingerprint bitset size has to be the same for query as well as for reference fingerprint files which is checked by <em>ParaSim</em> when the reference file is loaded.</p>
+
+<p>Files can be used either in plain text or in compressed gzip format in order to save disk space for large databases. Filename wildcards are extrapolated to multiple files but need to be quoted. Example query and reference files are packaged together with the <em>ParaSim</em> script itself in the data/ subdirectory. A typical input file looks like the following:</p>
+
+<pre><code>CID     BITCOUNT        FCFP_6_BASE64
+68664   52      AwIDARAAAAAAAIAAAAAAAAAEACAABgAAEAAAAAAAAAAAAAAAAAEAAAAA [... truncated]
+68938   56      CxIBCZAAAAIBAAAEAAABAAAggAAABgAAQIBAAAAAAYAAAEAAAAAAAAAA [... truncated]
+71360   70      A0IDAREAAQMBEIAAAACAwAAEAAAAAmAAAIAEAAAIQIAAAIAgAAIAQAAA [... truncated]
+[...]
+</code></pre>
+
+<h2>
+<a name="" class="anchor" href="#"><span class="octicon octicon-link"></span></a><br>
+</h2>
+
+<h2>
+<a name="persistent-memory-objects" class="anchor" href="#persistent-memory-objects"><span class="octicon octicon-link"></span></a>Persistent Memory Objects</h2>
+
+<p>As a special feature, <em>ParaSim</em> makes use of pre-stored persistent memory objects. This is because, for large data sets, reading of input files from disk becomes the performance-limiting step in comparison to
+pure calculation times. This is particularly true for repeated queries against the same set(s) of data.</p>
+
+<p>For that purpose, a supportive tool for <em>ParaSim</em> is available, <code>fp2mem.pl</code>, which reads a reference fingerprint file and stores it persistently in RAM. Memory consumption is about 100 MB per 1 million of fingerprints of length 1024. Parallel storage of several memory objects is possible which are identified and addressed by an integer key.<code>fp2mem.pl</code> can also be used to retrieve information about all stored memory objects on a machine as well as to destroy a particular memory object identified by its key.</p>
+
+<p>To access a memory object which was generated with fp2mem.pl as a reference dataset with <em>ParaSim,</em> use the <em>ParaSim</em> option <code>-r</code> (to define the reference set) together with the keyword <code>mem:</code> combined with the integer key of the object you want to use, i.e.<code>parasim.pl -r mem:7</code>. This will trigger <em>ParaSim</em> to read all reference fingerprint information directly from that particular memory object with key 7 and will significantly increase the return time for calculation results.</p>
+
+<p>For creation of a memory object, <code>fp2mem.pl</code> reads a valid <em>ParaSim</em> fingerprint file. Creation is triggered using option <code>-create</code> together with a numeric key which can be selected from a limited range of allowed integer values (default: 0-10) in order to avoid exhaustive consumption of memory.</p>
+
+<p>Information about stored datasets can be reviewed together with all information about the originator, the source file and the fingerprint type applying option <code>-info</code> for information about all datasets or again in combination with an integer key for one particular dataset. Similarly, options <code>-destroy</code> and <code>-dump</code>, in combination with an integer key, remove a dataset from memory or dump itâ€™s content to stdout (for debugging/testing only).</p>
+
+<p>It may be useful to trigger regular updating of a frequently used reference data set in memory by a cron job. For that purpose, option <code>-force</code> was added to prevent fp2mem.pl from requesting for confirmation
+for overwriting an existing memory object. For the same purpose, option <code>-silent</code> suppresses all output of progess information.</p>
+
+<p><strong>fp2mem.pl options summary:</strong></p>
+
+<pre><code>-info [#key]                       Output information about all existing memory objects.
+                                   Optionally, output information for one object identified by #key.
+-destroy #key                      Destroy the memory object identified by #key.
+-dump #key                         For testing only: Dumps the mem object's content to stdout.
+-create #key                       Create the memory object identified by #key. Requires option -file.
+    -file fingerprints.txt[.gz]    Used together with -create: The file containing the fingerprint data.
+                                   Wildcards are expanded but have to be quoted.
+    -silent                        Used together with -create: Suppress progress information output.
+-force                             Force deletion or recreation of existing memory object without confirmation.
+                                   CAUTION: This will overwrite all existing content of this object!
+-help/h                            Show this help.
+</code></pre>
+
+<p><br><strong>Technical note:</strong>The integer keys provided by the user are not used as they are but are converted internally to a numerical key which is unique for each machine. The reason is that all <em>ParaSim</em>-related tools need to identify the same memory objects from the same keys, but the key structure should not be too simple so that they may get mixed up with keys potentially used by other applications.</p>
+
+<hr><h2>
+<a name="how-to-use-the-tools-shipped-together-with-parasim" class="anchor" href="#how-to-use-the-tools-shipped-together-with-parasim"><span class="octicon octicon-link"></span></a>How to use the Tools shipped together with ParaSim</h2>
+
+<p>Together with <em>ParaSim</em> several additional scripts are packaged to facilitate the application of <em>ParaSim</em> and to demonstrate possible use cases. The scripts wrap pre-installed third party software for
+calculation of fingerprints. So, query or reference files for <em>ParaSim</em> can be generated directly from available structure file (SDF or Smiles).</p>
+
+<h3>
+<a name="rdkit2parasimpy" class="anchor" href="#rdkit2parasimpy"><span class="octicon octicon-link"></span></a>rdkit2parasim.py</h3>
+
+<p>This script expects a running installation of Python and RDKit. It converts an SDF or Smiles file (also gz-compressed) into a <em>ParaSim</em> fingerprint input file. If the script's default parameters are used, it requires source and destination filenames as arguments as well as the name of a property containing the unique integer ID of the structure. For regular Smiles files containing only two columns without column names, this parameter must be "_Name". So far, the RDKit implementations of Morgan fingerprints and feature-based Morgan fingerprints with different radii can be generated.</p>
+
+<p>In order to check if the script runs correctly, try</p>
+
+<pre><code>python rdkit2parasim.py pubchem-test.sdf dest.txt CID
+</code></pre>
+
+<p>or</p>
+
+<pre><code>python rdkit2parasim.py pubchem-test.smi dest.txt _Name
+</code></pre>
+
+<p>The content of file dest.txt should be identical to the provided file pubchem-test-featmorgan3.txt.</p>
+
+<p><strong>Options:</strong></p>
+
+<pre><code>positional arguments:
+  source        A valid Smiles string or the path to the source file. Can be a
+                .sdf[.gz] or .smi file
+  destination   Path of the destination file. Will be a tabbed .txt[.gz] file
+  id            Name of the property containing the unique structure
+                identifier. If the source is a valid Smiles string, the name of
+                the property can be freely chosen and it will be created during
+                runtime. If the source is a file of type .smi without title
+                line, it must be "_Name"
+
+optional arguments:
+   -h, --help   show this help message and exit
+   -f FP        RDKit fingerprint to be used. Allowed values: MORGAN or FEATMORGAN.
+                DEFAULT: FEATMORGAN
+   -r RADIUS    radius of the fingerprint. DEFAULT: 3
+   -l LENGTH    length of the fingerprint in bits. Must be a multiple of 8.
+                DEFAULT: 1024
+   -v           verbose: Print additional status information
+</code></pre>
+
+<p><br></p>
+
+<h3>
+<a name="molecule2parasimxml" class="anchor" href="#molecule2parasimxml"><span class="octicon octicon-link"></span></a>Molecule2Parasim.xml</h3>
+
+<p>This is a protocol for Pipeline Pilot™. It can be run either by importing it directly into a Pipeline Pilot™ client window or by calling it through another supportive script, <code>simsearch.pl</code>. Therefore, it requires a running Pipeline Pilot™ server (tested with version 8.5) which needs to be accessible via http to be called by <code>parasim.pl</code>. Make sure that you properly set the execution path for anonymous user access to Pipeline Pilot™ protocols in parasim-config.txt. The protocol reads molecules from SDF or Smiles files (also gz-compressed) and converts them either to FCFP or ECFP fingerprints of radius 2,4,6,8,10 or 12.</p>
+
+<p>In order to check if Pipeline Pilot™ settings are set correctly for access by <code>simsearch.pl</code> , try:</p>
+
+<pre><code>perl simsearch.pl -fp FCFP_6 -q data/pubchem-test.sdf -r data/zinc-test-fcfp6.txt -id CID
+</code></pre>
+
+<p>For the Smiles input version, the internal name of the ID property is "Data":</p>
+
+<pre><code>perl simsearch.pl -fp FCFP_6 -q data/pubchem-test.smi -r data/zinc-test-fcfp6.txt -id Data
+</code></pre>
+
+<p>In both cases, output should be:</p>
+
+<pre><code>QUERY   REFERENCE       TANIMOTO        AVG_TANIMOTO
+68664   ZINC01914437    0.198019801980198       0.104496307506587
+68938   ZINC03774999    0.160377358490566       0.122158970101436
+71360   ZINC03775002    0.133333333333333       0.103979492391050
+71696   ZINC03774999    0.163636363636364       0.118017086925888
+71917   ZINC03774999    0.147368421052632       0.102165139370256
+71107   ZINC03774999    0.173076923076923       0.128406853662191
+71542   ZINC01914437    0.185185185185185       0.107759423159295
+71227   ZINC03774999    0.181818181818182       0.129684949182247
+71767   ZINC03775009    0.174418604651163       0.122120643622887
+71923   ZINC03774991    0.154761904761905       0.117569042869504
+</code></pre>
+
+<p><br></p>
+
+<h3>
+<a name="parasim-conversion-knime-demozip" class="anchor" href="#parasim-conversion-knime-demozip"><span class="octicon octicon-link"></span></a>parasim-conversion-knime-demo.zip</h3>
+
+<p>This example workflow demonstrates how in principal <em>ParaSim</em> input files can be generated with the OpenSource workflow engine KNIME (<a href="http://www.knime.org/">http://www.knime.org/</a>) applying either RDKit or CDK fingerprints. Before using it, make sure you have the required Knime packages installed.</p>
+
+<p><strong>Caution:</strong>As the internal calculations applied within KNIME may differ from the implementations in the Perl or Python scripts, fingerprint files generated with KNIME may be different to those generated with the scripts. Therefore, only use fingerprint input files from the same source.</p>
+
+<h3>
+<a name="simsearchpl" class="anchor" href="#simsearchpl"><span class="octicon octicon-link"></span></a>simsearch.pl</h3>
+
+<p>This is the most powerful supportive script for <em>ParaSim</em> as it integrates the generation of fingerprint files either with RDKit or with Pipeline Pilot™ and the similarity search done with <em>ParaSim</em> itself. Therefore it allows similarity search against pre-computed reference fingerprint files directly from SDF or Smiles query files.</p>
+
+<p>As a wrapper script, simsearch.pl combines the functionalities and parameter sets of the three wrapped scripts. In addition to the already described <em>ParaSim</em> parameters, additional parameters are required for the fingerprint type to generate (option <code>-fp</code>) and the input file data field which contains the unique integer ID identifying each structure (option <code>-id</code>). For the full list of the combined set of options, use <code>perl simsearch.pl -h</code>.</p>
+
+<p>Simsearch.pl accepts SDF and Smiles files, also gz-compressed. For common Smiles files which only contain two columns without column names, one for the Smiles code and one for the ID, the ID data field name needs to be "Data" for use with Pipeline Pilot™ and "_Name" for use with RDKit.</p>
+
+<p><strong>Initialisation:</strong>If you want to start similarity searches directly from SDF or Smiles files using simsearch.pl, fingerprints and ParaSim input files need to be generated during runtime using either RDKit (through rdkit2parasim.py) or PipelinePilot™ (through Molecule2ParaSim.xml). Therefore, paths to the executables and scripts need to be defined in the paths section of <code>parasim-config.txt</code>.</p>
+
+<p>The functionality check for Pipeline Pilot™ fingerprints was described above. In order to check if it runs correctly for RDKit fingerprints, try:</p>
+
+<pre><code>perl simsearch.pl -fp featmorgan_3 -q data/pubchem-test.sdf -id CID -r data/zinc-test-featmorgan3.txt
+</code></pre>
+
+<p>Output should be:</p>
+
+<pre><code>QUERY   REFERENCE       TANIMOTO        AVG_TANIMOTO
+68664   ZINC03775002    0.181818181818182       0.116428576403331
+68938   ZINC03774999    0.146788990825688       0.121462650379503
+71696   ZINC03774999    0.168141592920354       0.108370896568424
+71360   ZINC03774991    0.125000000000000       0.101284467917619
+71542   ZINC01914437    0.228571428571429       0.141443815964918
+71917   ZINC01914437    0.135416666666667       0.101810400382934
+71227   ZINC03775002    0.191304347826087       0.133582252553683
+71107   ZINC03774999    0.216981132075472       0.124678368523578
+71767   ZINC03774991    0.116504854368932       0.096029465692885
+71923   ZINC03774999    0.144230769230769       0.121297586262549
+</code></pre>
+
+<p><br></p>
+
+<hr><h2>
+<a name="application-examples" class="anchor" href="#application-examples"><span class="octicon octicon-link"></span></a>Application Examples</h2>
+
+<p><strong>1. Load file pubchem-test-featmorgan3.txt into persistant memory object with key 0:</strong></p>
+
+<pre><code>perl fp2mem.pl -create 0 -file data/pubchem-test-featmorgan3.txt
+
+Reading Reference fingerprints from base64...
+
+  File data/pubchem-test-featmorgan3.txt:
+    ID: CID, FP type: FEATMORGAN_3, has bitcounts
+    FP length: 1024
+    Fingerprints read from file: 10
+
+Reference: 10 fingerprints read in total
+
+Created key 0 from file data/pubchem-test-featmorgan3.txt&lt;br&gt;
+
+KEY           : 0
+RECORDS       : 10
+FILE          : &lt;your_parasim_path/data/pubchem-test-featmorgan3.txt
+ID FIELD      : CID
+FP TYPE       : FEATMORGAN_3
+FP LENGTH     : 1024
+DATE          : &lt;creation_date&gt;
+CREATOR       : &lt;your_name&gt;
+BYTES USED    : 1'360
+PERMISSIONS   : 660
+SEGMENT COUNT : 1
+SEGMENT SIZE  : 65'536
+BYTES NET     : 1'450
+BYTES GROSS   : 65'536
+</code></pre>
+
+<p><br></p>
+
+<p><strong>2. For file pubchem-test-featmorgan3.txt, find the two nearest neighbours in itself (versus the memory object 0), applying the Dice similarity coefficient:</strong></p>
+
+<pre><code>perl parasim.pl -n 2 -c dice -q data/pubchem-test-featmorgan3.txt -r mem:0
+
+QUERY   REFERENCE       DICE
+71923   68664   0.285714285714286
+71923   71923   1.000000000000000
+68664   68664   1.000000000000000
+68664   71542   0.348623853211009
+68938   71917   0.387096774193548
+68938   68938   1.000000000000000
+71360   71360   1.000000000000000
+71360   68938   0.347107438016529
+71696   71696   1.000000000000000
+71696   71917   0.380000000000000
+71917   71917   1.000000000000000
+71917   68938   0.387096774193548
+71542   68664   0.348623853211009
+71542   71542   1.000000000000000
+71107   71107   1.000000000000000
+71107   68938   0.321428571428571
+71227   71227   1.000000000000000
+71227   71360   0.291970802919708
+71767   71767   1.000000000000000
+71767   71360   0.333333333333333
+</code></pre>
+
+<p><br></p>
+
+<p><strong>3. Same query, but from the SDF file directly and including only dice similarities between 0.35 and 0.999:</strong></p>
+
+<pre><code>perl simsearch.pl -n 2 -c dice -min 0.35 -max 0.99 -q data/pubchem-test.sdf -id CID -fp featmorgan_3 -r mem:0
+
+QUERY   REFERENCE       DICE
+71696   68938   0.365217391304348
+71696   71917   0.380000000000000
+71917   68938   0.387096774193548
+71917   71696   0.380000000000000
+68938   71696   0.365217391304348
+68938   71917   0.387096774193548
+</code></pre>
+
+<p><br></p>
+
+<p><strong>4. Search a Smiles string directly against pubchem-test-featmorgan3.txt which was stored in memory:</strong></p>
+
+<pre><code>perl simsearch.pl -id Name -fp featmorgan_3 -r mem:0 -q 'o1c2c\(cccc2\)cc1C\(=O\)N3CCNCC3'
+
+QUERY   REFERENCE       TANIMOTO        AVG_TANIMOTO
+1       68664   0.542372881355932       0.174922486279414
+</code></pre>
+
+<p>In this case, the ID property Name was generated during runtime.
+<br><strong>5. Destroy memory object with key 0:</strong></p>
+
+<pre><code>perl fp2mem.pl -destroy 0
+
+WARNING: Key 0 is already present! The next action will destroy all existing data! Continue (y/n): y
+
+Killed memory object with key 0 and all attached data.
+</code></pre>
+
+<p><br></p>
+
+<p><strong>6. Generate histogramme data for the occurence of distances of nearest neighbors between pubchem-test-fcfp6.txt and zinc-test-fcfp6.txt, rounded to two decimal places:</strong></p>
+
+<pre><code>perl parasim.pl -q data/pubchem-test-fcfp6.txt -r data/zinc-test-fcfp6.txt | awk '{printf("%.2f\n",$3)}' | sort -n | uniq -c
+      1 0.00
+      1 0.13
+      2 0.15
+      2 0.16
+      2 0.17
+      1 0.18
+      1 0.19
+      1 0.20
+</code></pre>
+
+<p><br></p>
+
+<hr><h2>
+<a name="troubleshooting" class="anchor" href="#troubleshooting"><span class="octicon octicon-link"></span></a>Troubleshooting</h2>
+
+<ul>
+<li>In general, if something does not work as desired, try first to rerun with option <code>-v</code>. Scripts are quite verbose and in most cases ouptput allows a solid guess what went wrong.</li>
+<li>Most frequently issues may occur during generation of persistent memory objects, i.e. due to lack of memory. In that case, fragmented semaphore arrays or memory segments may prevent generation of further memory objects. If this happens, remove all existing memory segments with <code>fp2mem.pl -destroy</code>, use <code>ipcs -a</code> to get a list of semaphores and then remove all remaining disturbing arrays and segments from memory with <code>ipcrm -m</code> or <code>ipcrm -s</code> together with the semaphore ids.</li>
+</ul><hr><h2>
+<a name="version-info" class="anchor" href="#version-info"><span class="octicon octicon-link"></span></a>Version Info</h2>
+
+<p><strong>V 0.04:</strong></p>
+
+<ul>
+<li>This is an important bugfix release. The persistent memory segment size is no longer static but adapted to the used memory to avoid depletion of segment addresses</li>
+<li>rdkit2parasim.py, Molecule2ParaSim.xml and simsearch.pl now allow not only filenames as query input parameters put also valid Smiles strings.</li>
+</ul><p><strong>V 0.03:</strong></p>
+
+<ul>
+<li>Allow non-integer structure IDs</li>
+<li>Achitecture: Externalize shared procedures (i.e. parsers) into module</li>
+<li>Determine and control fingerprint length from fingerprint itself (no option <code>-l</code>)</li>
+<li>Check query vs. reference fingerprint types to avoid mismatches</li>
+</ul><p><strong>V 0.02:</strong></p>
+
+<ul>
+<li>Proof of concept </li>
+</ul><hr><h2>
+<a name="development-roadmap" class="anchor" href="#development-roadmap"><span class="octicon octicon-link"></span></a>Development Roadmap</h2>
+
+<ul>
+<li>Calculate input bitcounts if not present</li>
+<li>Optionally report progress if output is redirected to file</li>
+<li>Fix reading twice during Perl to C data transfer </li>
+<li>Read fingerprints as blocks</li>
+<li>Avoid manual recompilation for different processor architectures</li>
+<li>Additional similarity indexes</li>
+<li>Try a Windows version using Win32::MMF for shared memory and OpenMP for multithreading</li>
+<li>Different input (FPS) and output formats</li>
+</ul><hr><h2>
+<a name="parasim-vs-chemfp" class="anchor" href="#parasim-vs-chemfp"><span class="octicon octicon-link"></span></a><em>ParaSim</em> vs. <em>ChemFP</em>
+</h2>
+
+<p>Andrew Dalke from Dalke Scientific develops and provides <em>ChemFP</em>, an OpenSource fingerprint toolbox optimized for fast similarity searches, which is currently about two to five time faster than <em>ParaSim</em> (see <a href="http://code.google.com/p/chem-fingerprints/">http://code.google.com/p/chem-fingerprints/</a>). However, <em>ParaSim</em> was continued to be developed as a separate project with the specific goal to make use of persistent memory objects for frequently repeated
+large-scale similarity searches. In later stages of the development of <em>ParaSim</em> it will presumably be tried to implement <em>ChemFP</em> function calls into <em>ParaSim</em>. If one day <em>ChemFP</em> should make use of persistent memory objects by itself, further development of <em>ParaSim</em> may get obsolete.</p>
+
+<hr><h2>
+<a name="acknowledgements" class="anchor" href="#acknowledgements"><span class="octicon octicon-link"></span></a>Acknowledgements</h2>
+
+<p>Algorithms in the current version of <em>ParaSim</em> are inspired by and with kind permission contain concepts for speed-optimized bitcount calculations presented by Andrew Dalke from Dalke Scientific (<a href="http://www.dalkescientific.com">http://www.dalkescientific.com</a>, see <a href="http://www.dalkescientific.com/writings/diary/archive/2008/06/27/computing_tanimoto_scores.html">detailed documentation</a>).</p>
+
+<p>Thanks to Thomas Fahle (<a href="http://www.thomas-fahle.de">http://www.thomas-fahle.de</a>) for introduction to the concept of IPC::Sharelite.</p>
+
+<hr><h2>
+<a name="licence" class="anchor" href="#licence"><span class="octicon octicon-link"></span></a>Licence</h2>
+
+<p>In order to allow usage of <em>ParaSim</em> in different collaboration scenarios with academic or industrial partners, source code of the programme itself and all eventually evolving present and future supporting scripts and material is released under the <a href="http://www.gnu.org/licenses/gpl.html">GNU General Public Licence v3</a>.</p>
+      </section>
+    </div>
+
+    <!-- FOOTER  -->
+    <div id="footer_wrap" class="outer">
+      <footer class="inner">
+        <p>Published with <a href="http://pages.github.com">GitHub Pages</a></p>
+      </footer>
+    </div>
+
+    
+
+  </body>
+</html>
