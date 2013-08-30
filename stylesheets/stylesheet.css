@@ -140,7 +140,8 @@ strong {
 }
 
 img {
-  position: relative;
+  /* position: relative; */
+  vertical-align: bottom;
   margin: 0 auto;
   max-width: 739px;
   padding: 5px;
